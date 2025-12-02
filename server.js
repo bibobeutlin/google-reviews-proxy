@@ -5,30 +5,28 @@ import cors from 'cors';
 const app = express();
 app.use(cors());
 
-const API_KEY = process.env.API_KEY;      // kommt aus Render Env Vars
-const PLACE_ID = process.env.PLACE_ID;    // kommt aus Render Env Vars
+const API_KEY = process.env.API_KEY;      // aus Render Env Vars
+const PLACE_ID = process.env.PLACE_ID;    // aus Render Env Vars
 
 app.get('/reviews', async (req, res) => {
   try {
-    const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${PLACE_ID}&fields=reviews&key=${API_KEY}`;
+    // Neues Places API (New) Format:
+    // Doku: https://developers.google.com/maps/documentation/places/web-service/place-data-fields#places-field-review
+    const url = `https://places.googleapis.com/v1/places/${PLACE_ID}?fields=reviews&key=${API_KEY}`;
+
     const response = await fetch(url);
     const data = await response.json();
 
-    // Zum Debuggen: komplette Antwort von Google ins Log schreiben
-    console.log('Google API response:', JSON.stringify(data, null, 2));
+    console.log('Google Places (New) response:', JSON.stringify(data, null, 2));
 
-    if (!data || data.status !== 'OK') {
-      // Wenn Google einen Fehler zurückgibt, zeigen wir ihn direkt nach außen
+    if (!data || data.error) {
       return res.status(500).json({
         error: 'Google API error',
         details: data
       });
     }
 
-    const reviews =
-      data.result && data.result.reviews
-        ? data.result.reviews
-        : [];
+    const reviews = data.reviews || [];
 
     res.json(reviews);
   } catch (error) {
@@ -37,7 +35,7 @@ app.get('/reviews', async (req, res) => {
   }
 });
 
-// Root-Route, damit nicht mehr "Cannot GET /" erscheint
+// Root-Route nur als einfache Check-Response
 app.get('/', (req, res) => {
   res.send('OK');
 });
